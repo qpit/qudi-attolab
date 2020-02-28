@@ -62,9 +62,9 @@ class ConfocalHistoryEntry(QtCore.QObject):
         self.z_range = confocal._scanning_device.get_position_range()[2]
 
         # Sets the current position to the center of the maximal scanning range
-        self.current_x = (self.x_range[0] + self.x_range[1]) / 2
-        self.current_y = (self.y_range[0] + self.y_range[1]) / 2
-        self.current_z = (self.z_range[0] + self.z_range[1]) / 2
+        self.current_x = self.x_range[0]
+        self.current_y = self.y_range[0]
+        self.current_z = self.z_range[0]
         self.current_a = 0.0
 
         # Sets the size of the image to the maximal scanning range
@@ -73,7 +73,7 @@ class ConfocalHistoryEntry(QtCore.QObject):
         self.image_z_range = self.z_range
 
         # Default values for the resolution of the scan
-        self.xy_resolution = 100
+        self.xy_resolution = 200
         self.z_resolution = 50
 
         # Initialization of internal counter for scanning

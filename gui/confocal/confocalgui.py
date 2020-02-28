@@ -196,6 +196,9 @@ class ConfocalGui(GUIBase):
 
         # Hide scan line display
         self._mw.scanLineDockWidget.hide()
+        self._mw.depth_scan_dockWidget.hide()
+        self._mw.optimizer_dockWidget.hide()
+
 
         # set up scan line plot
         sc = self._scanning_logic._scan_counter
@@ -1649,10 +1652,10 @@ class ConfocalGui(GUIBase):
         # Show any hidden dock widgets
         self._mw.xy_scan_dockWidget.show()
         self._mw.scan_control_dockWidget.show()
-        self._mw.depth_scan_dockWidget.show()
-        self._mw.optimizer_dockWidget.show()
-        self._mw.tilt_correction_dockWidget.hide()
-        self._mw.scanLineDockWidget.hide()
+        self._mw.depth_scan_dockWidget.hide(True)
+        self._mw.optimizer_dockWidget.hide(True)
+        self._mw.tilt_correction_dockWidget.hide(True)
+        self._mw.scanLineDockWidget.hide(True)
 
         # re-dock any floating dock widgets
         self._mw.xy_scan_dockWidget.setFloating(False)
@@ -1677,12 +1680,12 @@ class ConfocalGui(GUIBase):
         """
         # Hide the other dock widgets
         self._mw.xy_scan_dockWidget.hide()
-        self._mw.scan_control_dockWidget.hide()
-        self._mw.depth_scan_dockWidget.hide()
-
+        self._mw.scan_control_dockWidget.hide(True)
+        self._mw.depth_scan_dockWidget.hide(True)
+        self._mw.optimizer_dockWidget.hide(True)
         # Show the optimizer dock widget, and re-dock
-        self._mw.optimizer_dockWidget.show()
-        self._mw.optimizer_dockWidget.setFloating(False)
+
+        #self._mw.optimizer_dockWidget.setFloating(False)
 
         # Resize the window to small dimensions
         self._mw.resize(1000, 360)
