@@ -34,7 +34,7 @@ from qtpy import QtCore
 from core.connector import Connector
 from core.configoption import ConfigOption
 from logic.generic_logic import GenericLogic
-from interface.simple_laser_interface import ControlMode, ShutterState, LaserState
+from interface.simple_laser_interface import LaserState
 
 
 class TopticaDLCproTestLogic(GenericLogic):
@@ -64,21 +64,10 @@ class TopticaDLCproTestLogic(GenericLogic):
 
         # get laser capabilities
         self.laser_state = self._laser.get_laser_state()
-        #self.laser_shutter = self._laser.get_shutter_state()
-        #self.laser_can_turn_on = self.laser_state.value <= LaserState.ON.value
-        #self.laser_current_unit = self._laser.get_current_unit()
-        #self.laser_power_range = self._laser.get_power_range()
+        self.laser_can_turn_on = self.laser_state.value <= LaserState.ON.value
         #self.laser_current_range = self._laser.get_current_range()
-        #self.laser_power_setpoint = self._laser.get_power_setpoint()
         #self.laser_current_setpoint = self._laser.get_current_setpoint()
-        #self.laser_extra = self._laser.get_extra_info()
-        #self.laser_can_power = ControlMode.POWER in self._laser.allowed_control_modes()
-        #self.laser_can_current = ControlMode.CURRENT in self._laser.allowed_control_modes()
-        # if ControlMode.MIXED in self._laser.allowed_control_modes():
-        #     self.laser_can_power = True
-        #     self.laser_can_current = True
 
-        self.has_shutter = self._laser.get_shutter_state() != ShutterState.NOSHUTTER
         self.init_data_logging()
         self.start_query_loop()
 
@@ -102,9 +91,6 @@ class TopticaDLCproTestLogic(GenericLogic):
         try:
             #print('laserloop', QtCore.QThread.currentThreadId())
             self.laser_state = self._laser.get_laser_state()
-            #self.laser_shutter = self._laser.get_shutter_state()
-            #self.laser_power = self._laser.get_power()
-            #self.laser_power_setpoint = self._laser.get_power_setpoint()
             self.laser_current = self._laser.get_current()
             #self.laser_current_setpoint = self._laser.get_current_setpoint()
             self.laser_temps = self._laser.get_temperatures()
@@ -112,7 +98,6 @@ class TopticaDLCproTestLogic(GenericLogic):
             for k in self.data:
                 self.data[k] = np.roll(self.data[k], -1)
 
-            #self.data['power'][-1] = self.laser_power
             self.data['current'][-1] = self.laser_current
             self.data['time'][-1] = time.time()
 
@@ -144,27 +129,10 @@ class TopticaDLCproTestLogic(GenericLogic):
     def init_data_logging(self):
         """ Zero all log buffers. """
         self.data['current'] = np.zeros(self.bufferLength)
-        #self.data['power'] = np.zeros(self.bufferLength)
         self.data['time'] = np.ones(self.bufferLength) * time.time()
         temps = self._laser.get_temperatures()
         for name in temps:
              self.data[name] = np.zeros(self.bufferLength)
-
-    @QtCore.Slot(ControlMode)
-    def set_control_mode(self, mode):
-        """ Change whether the laser is controlled by dioe current or output power. """
-        #print('set_control_mode', QtCore.QThread.currentThreadId())
-        if mode in self._laser.allowed_control_modes():
-            ctrl_mode = ControlMode.MIXED
-            if mode == ControlMode.POWER:
-                self.laser_power = self._laser.get_power()
-                self._laser.set_power(self.laser_power)
-                ctrl_mode = self._laser.set_control_mode(mode)
-            elif mode == ControlMode.CURRENT:
-                self.laser_current = self._laser.get_current()
-                self._laser.set_current(self.laser_current)
-                ctrl_mode = self._laser.set_control_mode(mode)
-            self.log.info('Changed control mode to {0}'.format(ctrl_mode))
 
     @QtCore.Slot(bool)
     def set_laser_state(self, state):
@@ -175,14 +143,6 @@ class TopticaDLCproTestLogic(GenericLogic):
             self._laser.off()
         self.sigUpdate.emit()
 
-    @QtCore.Slot(bool)
-    def set_shutter_state(self, state):
-        """ Open or close the laser output shutter. """
-        if state and self.laser_shutter == ShutterState.CLOSED:
-            self._laser.set_shutter_state(ShutterState.OPEN)
-        if not state and self.laser_shutter == ShutterState.OPEN:
-            self._laser.set_shutter_state(ShutterState.CLOSED)
-
     @QtCore.Slot(float)
     def set_power(self, power):
         """ Set laser output power. """
@@ -192,4 +152,6 @@ class TopticaDLCproTestLogic(GenericLogic):
     def set_current(self, current):
         """ Set laser diode current. """
         self._laser.set_current(current)
+
+
 

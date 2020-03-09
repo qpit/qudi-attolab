@@ -27,6 +27,7 @@ from core.module import Base
 
 from interface.simple_laser_interface import SimpleLaserInterface
 from interface.confocal_scanner_interface import ConfocalScannerInterface
+from interface.simple_laser_interface import LaserState
 
 import socket
 import time
@@ -57,7 +58,9 @@ class Toptica_DLC_proDummy(Base, SimpleLaserInterface, ConfocalScannerInterface)
     def __init__(self, **kwargs):
         """ """
         super().__init__(**kwargs)
+        self.lstate = LaserState.OFF
         self.current_setpoint = 0
+        self.wavelength_setpoint = 960
 
     def on_activate(self):
         """ Activate Module.
@@ -77,6 +80,17 @@ class Toptica_DLC_proDummy(Base, SimpleLaserInterface, ConfocalScannerInterface)
             self.set_parameter(command = 'laser1:dl:cc:enabled', param = '#f')
             self.read_parameter(command = 'laser1:dl:cc:current-set')
     """
+    #######################################################################
+    # ================== Commands not in any interfaces====================
+    #######################################################################
+    def set_wavelength(self,setwavelength):
+        self.wavelength_setpoint = setwavelength
+        return
+
+    def get_wavelength(self):
+        wavelength = self.wavelength_setpoint * random.gauss(1, 0.0005)
+        return wavelength
+
 
     #######################################################################
     # ================== SimpleLaserInterface Commands ====================
@@ -91,7 +105,11 @@ class Toptica_DLC_proDummy(Base, SimpleLaserInterface, ConfocalScannerInterface)
             factor * (laser1:dl:pc:voltage-set - 69.5 V)
             This parameter setting affects the laser1:dl:cc:current-offset value.
         """
-        return self.current_setpoint * random.gauss(1, 0.05)
+        if self.lstate == LaserState.OFF:
+            current = 0
+        else:
+            current = self.current_setpoint * random.gauss(1, 0.005)
+        return current
 
     def set_current(self, current):
         """ Set laser current setpoint
@@ -113,7 +131,9 @@ class Toptica_DLC_proDummy(Base, SimpleLaserInterface, ConfocalScannerInterface)
             #t - laser emission on
             #f - laser emission off
         """
-        return
+        time.sleep(1)
+        self.lstate = LaserState.ON
+        return self.lstate
 
     def off(self):
         """ Turn off laser.
@@ -122,7 +142,9 @@ class Toptica_DLC_proDummy(Base, SimpleLaserInterface, ConfocalScannerInterface)
             #t - laser emission on
             #f - laser emission off
         """
-        return
+        time.sleep(1)
+        self.lstate = LaserState.OFF
+        return self.lstate
 
     def get_laser_state(self):
         """ Get laser state
@@ -131,7 +153,7 @@ class Toptica_DLC_proDummy(Base, SimpleLaserInterface, ConfocalScannerInterface)
             #t - laser is switched on
             #f - laser is switched off
         """
-        return "ON/OFF"
+        return self.lstate
 
     def get_temperatures(self):
         """ Get all available temperatures.
@@ -140,14 +162,16 @@ class Toptica_DLC_proDummy(Base, SimpleLaserInterface, ConfocalScannerInterface)
         """
         return {'head': 42.0 * random.gauss(1, 0.2)}
 
+
+    ######################################################################################
+    # The following methods are unused and are free to be picked up for other applications
+    ######################################################################################
     def get_current_setpoint(self):
         """ Get laser curent setpoint
             @return float: laser current setpoint
         """
-        return self.current_setpoint
-    ######################################################################################
-    # The following methods are unused and are free to be picked up for other applications
-    ######################################################################################
+        return
+
     def get_power_range(self):
         """ Return optical power range
             @return (float, float): power range

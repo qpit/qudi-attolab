@@ -59,6 +59,7 @@ class Toptica_DLC_pro(Base, SimpleLaserInterface, ConfocalScannerInterface):
         super().__init__(**kwargs)
         self.lstate = LaserState.OFF
         self.current_setpoint = 0
+        self.wavelength_setpoint = 960
 
 
     def on_activate(self):
@@ -123,6 +124,18 @@ class Toptica_DLC_pro(Base, SimpleLaserInterface, ConfocalScannerInterface):
         except ValueError:
             print('Error parsing the answer')
         return (value[index_start:index_stop]).decode('utf-8')
+
+    #######################################################################
+    # ================== Commands not in any interfaces====================
+    #######################################################################
+    def set_wavelength(self, setwavelength):
+        self.wavelength_setpoint = setwavelength
+        self.set_parameter(command='laser1:ctl:wavelength-set', param='{}'.format(self.wavelength_setpoint))
+        return self.wavelength_setpoint
+
+    def get_wavelength(self):
+        wavelength = float(self.read_parameter(command='laser1:ctl:wavelength-act'))
+        return wavelength
 
     #######################################################################
     # ================== SimpleLaserInterface Commands ====================

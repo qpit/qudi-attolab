@@ -71,8 +71,9 @@ class LaserGUI(GUIBase):
     savelogic = Connector(interface='SaveLogic')
 
     sigLaser = QtCore.Signal(bool)
-    sigPower = QtCore.Signal(float)
+    # sigPower = QtCore.Signal(float)
     sigCurrent = QtCore.Signal(float)
+    sigWavelength = QtCore.Signal(float)
 
     def __init__(self, config, **kwargs):
         super().__init__(config=config, **kwargs)
@@ -117,8 +118,10 @@ class LaserGUI(GUIBase):
         self._mw.laserButton.clicked.connect(self.changeLaserState)
         self.sigLaser.connect(self._laser_logic.set_laser_state)
         self.sigCurrent.connect(self._laser_logic.set_current)
-        self.sigPower.connect(self._laser_logic.set_power)
-        self.sliderProxy = pg.SignalProxy(self._mw.setValueVerticalSlider.valueChanged, 0.1, 5, self.updateFromSlider)
+        self.sigWavelength.connect(self._laser_logic.set_wavelength)
+        # self.sigPower.connect(self._laser_logic.set_power)
+        self.sliderProxy1 = pg.SignalProxy(self._mw.setValueVerticalSlider.valueChanged, 0.1, 5, self.updateFromSlider)
+        self.sliderProxy2 = pg.SignalProxy(self._mw.setWavelengthVerticalSlider.valueChanged, 0.1, 5, self.updateFromSlider)
         self._mw.setValueDoubleSpinBox.editingFinished.connect(self.updateFromSpinBox)
         self._laser_logic.sigUpdate.connect(self.updateGui)
 
@@ -175,7 +178,8 @@ class LaserGUI(GUIBase):
     @QtCore.Slot()
     def updateGui(self):
         """ Update labels, the plot and button states with new data. """
-        self._mw.currentLabel.setText('{0:6.3f} {1}'.format(self._laser_logic.laser_current, "mA"))
+        self._mw.currentLabel.setText('{0:6.2f} {1}'.format(self._laser_logic.laser_current, "mA"))
+        self._mw.wavelengthLabel.setText('{0:6.4f} {1}'.format(self._laser_logic.laser_wavelength, "nm"))
         self.updateButtonsEnabled()
         for name, curve in self.curves.items():
             curve.setData(x=self._laser_logic.data['time'], y=self._laser_logic.data[name])
@@ -186,9 +190,16 @@ class LaserGUI(GUIBase):
         self._mw.setValueVerticalSlider.setValue(self._mw.setValueDoubleSpinBox.value())
         self.sigCurrent.emit(self._mw.setValueDoubleSpinBox.value())
 
+        self._mw.setWavelengthVerticalSlider.setValue(self._mw.setWavelengthDoubleSpinBox.value())
+        self.sigWavelength.emit(self._mw.setWavelengthDoubleSpinBox.value())
+
     @QtCore.Slot()
     def updateFromSlider(self):
         """ The user has changed the slider, update all other values from that. """
         self._mw.setValueDoubleSpinBox.setValue(self._mw.setValueVerticalSlider.value())
         self.sigCurrent.emit(self._mw.setValueDoubleSpinBox.value())
+
+        self._mw.setWavelengthDoubleSpinBox.setValue(self._mw.setWavelengthVerticalSlider.value())
+        self.sigWavelength.emit(self._mw.setWavelengthDoubleSpinBox.value())
+
 

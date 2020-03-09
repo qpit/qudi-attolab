@@ -92,6 +92,7 @@ class TopticaDLCproLogic(GenericLogic):
             #print('laserloop', QtCore.QThread.currentThreadId())
             self.laser_state = self._laser.get_laser_state()
             self.laser_current = self._laser.get_current()
+            self.laser_wavelength = self._laser.get_wavelength()
             #self.laser_current_setpoint = self._laser.get_current_setpoint()
             self.laser_temps = self._laser.get_temperatures()
 
@@ -99,6 +100,7 @@ class TopticaDLCproLogic(GenericLogic):
                 self.data[k] = np.roll(self.data[k], -1)
 
             self.data['current'][-1] = self.laser_current
+            # self.data['wavelength'][-1] = self.laser_wavelength
             self.data['time'][-1] = time.time()
 
             for k, v in self.laser_temps.items():
@@ -142,14 +144,29 @@ class TopticaDLCproLogic(GenericLogic):
         if not state and self.laser_state == LaserState.ON:
             self._laser.off()
         self.sigUpdate.emit()
-
-    @QtCore.Slot(float)
-    def set_power(self, power):
-        """ Set laser output power. """
-        self._laser.set_power(power)
+    #
+    # @QtCore.Slot(float)
+    # def set_power(self, power):
+    #     """ Set laser output power. """
+    #     self._laser.set_power(power)
 
     @QtCore.Slot(float)
     def set_current(self, current):
         """ Set laser diode current. """
-        self._laser.set_current(current)
+        max_current = 167
+        if current <= max_current:
+            self._laser.set_current(current)
+        else:
+            self._laser.set_current(max_current)
 
+    @QtCore.Slot(float)
+    def set_wavelength(self, wavelength):
+        """ Set laser diode current. """
+        min_wavelength = 955
+        max_wavelength = 965
+        if wavelength < min_wavelength:
+            self._laser.set_wavelength(min_wavelength)
+        elif wavelength > max_wavelength:
+            self._laser.set_wavelengtH(max_wavelength)
+        else:
+            self._laser.set_wavelength(wavelength)
