@@ -37,6 +37,7 @@ from core.statusvariable import StatusVar
 class OldConfigFileError(Exception):
     """ Exception that is thrown when an old config file is loaded.
     """
+
     def __init__(self):
         super().__init__('Old configuration file detected. Ignoring confocal history.')
 
@@ -289,7 +290,7 @@ class ConfocalLogic(GenericLogic):
     def __init__(self, config, **kwargs):
         super().__init__(config=config, **kwargs)
 
-        #locking for thread safety
+        # locking for thread safety
         self.threadlock = Mutex()
 
         # counter for scan_image
@@ -326,7 +327,7 @@ class ConfocalLogic(GenericLogic):
                     'Old style config file detected. History {0} ignored.'.format(i))
             except:
                 self.log.warning(
-                        'Restoring history {0} failed.'.format(i))
+                    'Restoring history {0} failed.'.format(i))
         try:
             new_state = ConfocalHistoryEntry(self)
             new_state.deserialize(self._statusVariables['history_0'])
@@ -383,13 +384,13 @@ class ConfocalLogic(GenericLogic):
         @return int: error code (0:OK, -1:error)
         """
         self._clock_frequency = int(clock_frequency)
-        #checks if scanner is still running
+        # checks if scanner is still running
         if self.module_state() == 'locked':
             return -1
         else:
             return 0
 
-    def start_scanning(self, zscan = False, tag='logic'):
+    def start_scanning(self, zscan=False, tag='logic'):
         """Starts scanning
 
         @param bool zscan: zscan if true, xyscan if false
@@ -397,8 +398,8 @@ class ConfocalLogic(GenericLogic):
         @return int: error code (0:OK, -1:error)
         """
         # TODO: this is dirty, but it works for now
-#        while self.module_state() == 'locked':
-#            time.sleep(0.01)
+        #        while self.module_state() == 'locked':
+        #            time.sleep(0.01)
         self._scan_counter = 0
         self._zscan = zscan
         if self._zscan:
@@ -409,7 +410,7 @@ class ConfocalLogic(GenericLogic):
         self.signal_start_scanning.emit(tag)
         return 0
 
-    def continue_scanning(self,zscan,tag='logic'):
+    def continue_scanning(self, zscan, tag='logic'):
         """Continue scanning
 
         @return int: error code (0:OK, -1:error)
@@ -480,10 +481,10 @@ class ConfocalLogic(GenericLogic):
             # prevents distorion of the image
             if (x2 - x1) >= (y2 - y1):
                 self._X = np.linspace(x1, x2, max(self.xy_resolution, 2))
-                self._Y = np.linspace(y1, y2, max(int(self.xy_resolution*(y2-y1)/(x2-x1)), 2))
+                self._Y = np.linspace(y1, y2, max(int(self.xy_resolution * (y2 - y1) / (x2 - x1)), 2))
             else:
                 self._Y = np.linspace(y1, y2, max(self.xy_resolution, 2))
-                self._X = np.linspace(x1, x2, max(int(self.xy_resolution*(x2-x1)/(y2-y1)), 2))
+                self._X = np.linspace(x1, x2, max(int(self.xy_resolution * (x2 - x1) / (y2 - y1)), 2))
 
         self._XL = self._X
         self._YL = self._Y
@@ -499,13 +500,13 @@ class ConfocalLogic(GenericLogic):
             self.depth_img_is_xz = self.depth_scan_dir_is_xz
             # depth scan is in xz plane
             if self.depth_img_is_xz:
-                #self._image_horz_axis = self._X
+                # self._image_horz_axis = self._X
                 # creates an image where each pixel will be [x,y,z,counts]
                 self.depth_image = np.zeros((
-                        len(self._image_vert_axis),
-                        len(self._X),
-                        3 + len(self.get_scanner_count_channels())
-                    ))
+                    len(self._image_vert_axis),
+                    len(self._X),
+                    3 + len(self.get_scanner_count_channels())
+                ))
 
                 self.depth_image[:, :, 0] = np.full(
                     (len(self._image_vert_axis), len(self._X)), self._XL)
@@ -518,13 +519,13 @@ class ConfocalLogic(GenericLogic):
 
             # depth scan is yz plane instead of xz plane
             else:
-                #self._image_horz_axis = self._Y
+                # self._image_horz_axis = self._Y
                 # creats an image where each pixel will be [x,y,z,counts]
                 self.depth_image = np.zeros((
-                        len(self._image_vert_axis),
-                        len(self._Y),
-                        3 + len(self.get_scanner_count_channels())
-                    ))
+                    len(self._image_vert_axis),
+                    len(self._Y),
+                    3 + len(self.get_scanner_count_channels())
+                ))
 
                 self.depth_image[:, :, 0] = self._current_x * np.ones(
                     (len(self._image_vert_axis), len(self._Y)))
@@ -543,14 +544,14 @@ class ConfocalLogic(GenericLogic):
 
         # xy scan is in xy plane
         else:
-            #self._image_horz_axis = self._X
+            # self._image_horz_axis = self._X
             self._image_vert_axis = self._Y
             # creats an image where each pixel will be [x,y,z,counts]
             self.xy_image = np.zeros((
-                    len(self._image_vert_axis),
-                    len(self._X),
-                    3 + len(self.get_scanner_count_channels())
-                ))
+                len(self._image_vert_axis),
+                len(self._X),
+                3 + len(self.get_scanner_count_channels())
+            ))
 
             self.xy_image[:, :, 0] = np.full(
                 (len(self._image_vert_axis), len(self._X)), self._XL)
@@ -788,31 +789,31 @@ class ConfocalLogic(GenericLogic):
             if self.depth_img_is_xz or not self._zscan:
                 if n_ch <= 3:
                     return_line = np.vstack([
-                        self._return_XL,
-                        image[self._scan_counter, 0, 1] * np.ones(self._return_XL.shape),
-                        image[self._scan_counter, 0, 2] * np.ones(self._return_XL.shape)
-                    ][0:n_ch])
+                                                self._return_XL,
+                                                image[self._scan_counter, 0, 1] * np.ones(self._return_XL.shape),
+                                                image[self._scan_counter, 0, 2] * np.ones(self._return_XL.shape)
+                                            ][0:n_ch])
                 else:
                     return_line = np.vstack([
-                            self._return_XL,
-                            image[self._scan_counter, 0, 1] * np.ones(self._return_XL.shape),
-                            image[self._scan_counter, 0, 2] * np.ones(self._return_XL.shape),
-                            np.ones(self._return_XL.shape) * self._current_a
-                        ])
+                        self._return_XL,
+                        image[self._scan_counter, 0, 1] * np.ones(self._return_XL.shape),
+                        image[self._scan_counter, 0, 2] * np.ones(self._return_XL.shape),
+                        np.ones(self._return_XL.shape) * self._current_a
+                    ])
             else:
                 if n_ch <= 3:
                     return_line = np.vstack([
-                            image[self._scan_counter, 0, 1] * np.ones(self._return_YL.shape),
-                            self._return_YL,
-                            image[self._scan_counter, 0, 2] * np.ones(self._return_YL.shape)
-                        ][0:n_ch])
+                                                image[self._scan_counter, 0, 1] * np.ones(self._return_YL.shape),
+                                                self._return_YL,
+                                                image[self._scan_counter, 0, 2] * np.ones(self._return_YL.shape)
+                                            ][0:n_ch])
                 else:
                     return_line = np.vstack([
-                            image[self._scan_counter, 0, 1] * np.ones(self._return_YL.shape),
-                            self._return_YL,
-                            image[self._scan_counter, 0, 2] * np.ones(self._return_YL.shape),
-                            np.ones(self._return_YL.shape) * self._current_a
-                        ])
+                        image[self._scan_counter, 0, 1] * np.ones(self._return_YL.shape),
+                        self._return_YL,
+                        image[self._scan_counter, 0, 2] * np.ones(self._return_YL.shape),
+                        np.ones(self._return_YL.shape) * self._current_a
+                    ])
 
             # return the scanner to the start of next line, counts are thrown away
             return_line_counts = self._scanning_device.scan_line(return_line)
@@ -864,8 +865,8 @@ class ConfocalLogic(GenericLogic):
 
         @param: list colorscale_range (optional) The range [min, max] of the display colour scale (for the figure)
 
-        @param: list percentile_range (optional) The percentile range [min, max] of the color scale 
-        
+        @param: list percentile_range (optional) The percentile range [min, max] of the color scale
+
         @param: bool block (optional) If False, return immediately; if True, block until save completes."""
 
         if block:
@@ -919,9 +920,9 @@ class ConfocalLogic(GenericLogic):
             # data for the text-array "image":
             image_data = OrderedDict()
             image_data['Confocal pure XY scan image data without axis.\n'
-                'The upper left entry represents the signal at the upper left pixel position.\n'
-                'A pixel-line in the image corresponds to a row '
-                'of entries where the Signal is in counts/s:'] = self.xy_image[:, :, 3 + n]
+                       'The upper left entry represents the signal at the upper left pixel position.\n'
+                       'A pixel-line in the image corresponds to a row '
+                       'of entries where the Signal is in counts/s:'] = self.xy_image[:, :, 3 + n]
 
             filelabel = 'confocal_xy_image_{0}'.format(ch.replace('/', ''))
             self._save_logic.save_data(image_data,
@@ -968,8 +969,8 @@ class ConfocalLogic(GenericLogic):
 
         @param: list colorscale_range (optional) The range [min, max] of the display colour scale (for the figure)
 
-        @param: list percentile_range (optional) The percentile range [min, max] of the color scale 
-        
+        @param: list percentile_range (optional) The percentile range [min, max] of the color scale
+
         @param: bool block (optional) If False, return immediately; if True, block until save completes."""
         if block:
             self._save_depth_data(colorscale_range, percentile_range)
@@ -1028,9 +1029,9 @@ class ConfocalLogic(GenericLogic):
             # data for the text-array "image":
             image_data = OrderedDict()
             image_data['Confocal pure depth scan image data without axis.\n'
-                'The upper left entry represents the signal at the upper left pixel position.\n'
-                'A pixel-line in the image corresponds to a row in '
-                'of entries where the Signal is in counts/s:'] = self.depth_image[:, :, 3 + n]
+                       'The upper left entry represents the signal at the upper left pixel position.\n'
+                       'A pixel-line in the image corresponds to a row in '
+                       'of entries where the Signal is in counts/s:'] = self.depth_image[:, :, 3 + n]
 
             filelabel = 'confocal_depth_image_{0}'.format(ch.replace('/', ''))
             self._save_logic.save_data(image_data,
@@ -1065,7 +1066,8 @@ class ConfocalLogic(GenericLogic):
         self.signal_depth_data_saved.emit()
         return
 
-    def draw_figure(self, data, image_extent, scan_axis=None, cbar_range=None, percentile_range=None,  crosshair_pos=None):
+    def draw_figure(self, data, image_extent, scan_axis=None, cbar_range=None, percentile_range=None,
+                    crosshair_pos=None):
         """ Create a 2-D color map figure of the scan image.
 
         @param: array data: The NxM array of count values from a scan with NxM pixels.
@@ -1098,19 +1100,18 @@ class ConfocalLogic(GenericLogic):
         image_dimension = image_extent.copy()
 
         while draw_cb_range[1] > 1000:
-            image_data = image_data/1000
-            draw_cb_range = draw_cb_range/1000
+            image_data = image_data / 1000
+            draw_cb_range = draw_cb_range / 1000
             prefix_count = prefix_count + 1
 
         c_prefix = prefix[prefix_count]
-
 
         # Scale axes values using SI prefix
         axes_prefix = ['', 'm', r'$\mathrm{\mu}$', 'n']
         x_prefix_count = 0
         y_prefix_count = 0
 
-        while np.abs(image_dimension[1]-image_dimension[0]) < 1:
+        while np.abs(image_dimension[1] - image_dimension[0]) < 1:
             image_dimension[0] = image_dimension[0] * 1000.
             image_dimension[1] = image_dimension[1] * 1000.
             x_prefix_count = x_prefix_count + 1
@@ -1131,7 +1132,7 @@ class ConfocalLogic(GenericLogic):
 
         # Create image plot
         cfimage = ax.imshow(image_data,
-                            cmap=plt.get_cmap('inferno'), # reference the right place in qd
+                            cmap=plt.get_cmap('inferno'),  # reference the right place in qd
                             origin="lower",
                             vmin=draw_cb_range[0],
                             vmax=draw_cb_range[1],
@@ -1159,18 +1160,18 @@ class ConfocalLogic(GenericLogic):
                 ax.transAxes,
                 ax.transData)
 
-            ax.annotate('', xy=(crosshair_pos[0]*np.power(1000,x_prefix_count), 0),
-                        xytext=(crosshair_pos[0]*np.power(1000,x_prefix_count), -0.01), xycoords=trans_xmark,
+            ax.annotate('', xy=(crosshair_pos[0] * np.power(1000, x_prefix_count), 0),
+                        xytext=(crosshair_pos[0] * np.power(1000, x_prefix_count), -0.01), xycoords=trans_xmark,
                         arrowprops=dict(facecolor='#17becf', shrink=0.05),
                         )
 
-            ax.annotate('', xy=(0, crosshair_pos[1]*np.power(1000,y_prefix_count)),
-                        xytext=(-0.01, crosshair_pos[1]*np.power(1000,y_prefix_count)), xycoords=trans_ymark,
+            ax.annotate('', xy=(0, crosshair_pos[1] * np.power(1000, y_prefix_count)),
+                        xytext=(-0.01, crosshair_pos[1] * np.power(1000, y_prefix_count)), xycoords=trans_ymark,
                         arrowprops=dict(facecolor='#17becf', shrink=0.05),
                         )
 
         # Draw the colorbar
-        cbar = plt.colorbar(cfimage, shrink=0.8)#, fraction=0.046, pad=0.08, shrink=0.75)
+        cbar = plt.colorbar(cfimage, shrink=0.8)  # , fraction=0.046, pad=0.08, shrink=0.75)
         cbar.set_label('Fluorescence (' + c_prefix + 'c/s)')
 
         # remove ticks from colorbar for cleaner image

@@ -170,3 +170,49 @@ class TopticaDLCproLogic(GenericLogic):
             self._laser.set_wavelengtH(max_wavelength)
         else:
             self._laser.set_wavelength(wavelength)
+
+    @QtCore.Slot(float)
+    def set_opt(self, state):
+        """ Turn ustep optimization on or off. """
+        print("{}".format(state))
+        if state == 1:
+            self._laser.smile_optmization(1)
+            print("!!! SMILE OPTIMIZATION TAKES APPROX. 1 MIN. DO NO CHANGE PARAMETERS IN THE"
+                  "MEANTIME !!!")
+        elif state == 0:
+            self._laser.smile_optmization(0)
+
+        elif state == 3:
+            self._laser.ustep_optmization(1)
+            print("!!! FLOW OPTIMIZATION TAKES APPROX. 5 MIN. DO NOT CHANGE PARAMETERS IN THE"
+                  "MEANTIME !!!")
+        else:
+            self._laser.ustep_optmization(0)
+
+    ###########################################################################
+    # ============== Logic methods form Laser_scanner_logic====================
+    ###########################################################################
+
+    @QtCore.Slot(float)
+    def set_min_voltage(self, voltage):
+        """ Set the minimum voltage of the piezo scan. """
+
+    @QtCore.Slot(float)
+    def set_max_volt(self, voltage):
+        """ Set the minimum voltage of the piezo scan. """
+
+    @QtCore.Slot(float)
+    def set_volt_off(self, voltage):
+        """ Set the offset voltage of the piezo scan. """
+
+    @QtCore.Slot(float)
+    def set_max_volt(self, voltage):
+        """ Set the minimum voltage of the piezo scan. """
+
+    @QtCore.Slot(float)
+    def set_num_meas(self, num_meas):
+        """ Set the number of iteration/measurement for the scan. """
+
+    @QtCore.Slot(float)
+    def set_meas_freq(self, freq):
+        """ Set the number of iteration/measurement for the scan. """

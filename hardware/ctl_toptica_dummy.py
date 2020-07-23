@@ -91,6 +91,14 @@ class Toptica_DLC_proDummy(Base, SimpleLaserInterface, ConfocalScannerInterface)
         wavelength = self.wavelength_setpoint * random.gauss(1, 0.0005)
         return wavelength
 
+    def smile_optimization(self,on):
+        print("smile {}".format(on))
+        return
+
+    def ustep_optimization(self,on):
+        print("flow {}".format(on))
+        return
+
 
     #######################################################################
     # ================== SimpleLaserInterface Commands ====================

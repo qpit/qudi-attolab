@@ -137,6 +137,20 @@ class Toptica_DLC_pro(Base, SimpleLaserInterface, ConfocalScannerInterface):
         wavelength = float(self.read_parameter(command='laser1:ctl:wavelength-act'))
         return wavelength
 
+    def smile_optimization(self,opt):
+        if opt[0] == 1:
+            self.set_parameter(command='laser1:ctl:optimization:smile')
+        else:
+            self.set_parameter(command='laser1:ctl:optimization:abort')
+        return
+
+    def ustep_optimization(self,opt):
+        if opt[1] == 1:
+            self.set_parameter(command='laser1:ctl:optimization:flow')
+        else:
+            self.set_parameter(command='laser1:ctl:optimization:abort')
+        return
+
     #######################################################################
     # ================== SimpleLaserInterface Commands ====================
     #######################################################################

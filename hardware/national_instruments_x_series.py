@@ -77,8 +77,8 @@ class NationalInstrumentsXSeries(Base, SlowCounterInterface, ConfocalScannerInte
         scanner_position_ranges:
             - [0e-6, 200e-6]
             - [0e-6, 200e-6]
-            - [-100e-6, 100e-6]
-            - [-10, 10]
+            - [0, 10]
+            - [0, 10]
 
         odmr_trigger_channel: '/Dev1/PFI7'
 

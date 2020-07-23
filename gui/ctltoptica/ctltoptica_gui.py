@@ -71,9 +71,16 @@ class LaserGUI(GUIBase):
     savelogic = Connector(interface='SaveLogic')
 
     sigLaser = QtCore.Signal(bool)
-    # sigPower = QtCore.Signal(float)
     sigCurrent = QtCore.Signal(float)
     sigWavelength = QtCore.Signal(float)
+
+    sigOpt = QtCore.Signal(float)
+    sigMinVolt = QtCore.Signal(float)
+    sigMaxVolt = QtCore.Signal(float)
+    sigOffVolt = QtCore.Signal(float)
+    sigNumMeas = QtCore.Signal(float)
+    sigMeasFreq = QtCore.Signal(float)
+
 
     def __init__(self, config, **kwargs):
         super().__init__(config=config, **kwargs)
@@ -116,10 +123,20 @@ class LaserGUI(GUIBase):
 
         self.updateButtonsEnabled()
         self._mw.laserButton.clicked.connect(self.changeLaserState)
+        # self.sigSmileOpt.connect(self._laser_logic.set_smile_opt)
+        # self.sigUStepOpt.connect(self._laser_logic.set_ustep_opt)
+        self.sigOpt.connect(self._laser_logic.set_opt)
+
         self.sigLaser.connect(self._laser_logic.set_laser_state)
         self.sigCurrent.connect(self._laser_logic.set_current)
         self.sigWavelength.connect(self._laser_logic.set_wavelength)
-        # self.sigPower.connect(self._laser_logic.set_power)
+
+        # self.sigMinVolt.connect(self._laser_logic.)
+        # self.sigMaxVolt.connect(self._laser_logic.)
+        # self.sigOffVolt.connect(self._laser_logic.)
+        # self.sigNumMeas.connect(self._laser_logic.)
+        # self.sigMeasFreq.connect(self._laser_logic.)
+
         self.sliderProxy1 = pg.SignalProxy(self._mw.setValueVerticalSlider.valueChanged, 0.1, 5, self.updateFromSlider)
         self.sliderProxy2 = pg.SignalProxy(self._mw.setWavelengthVerticalSlider.valueChanged, 0.1, 5, self.updateFromSlider)
         self._mw.setValueDoubleSpinBox.editingFinished.connect(self.updateFromSpinBox)
@@ -180,6 +197,7 @@ class LaserGUI(GUIBase):
         """ Update labels, the plot and button states with new data. """
         self._mw.currentLabel.setText('{0:6.2f} {1}'.format(self._laser_logic.laser_current, "mA"))
         self._mw.wavelengthLabel.setText('{0:6.4f} {1}'.format(self._laser_logic.laser_wavelength, "nm"))
+        self._mw.frequencyLabel.setText('{0:6.4f} {1}'.format(299792458/1e3/self._laser_logic.laser_wavelength, "THz"))
         self.updateButtonsEnabled()
         for name, curve in self.curves.items():
             curve.setData(x=self._laser_logic.data['time'], y=self._laser_logic.data[name])
@@ -202,4 +220,15 @@ class LaserGUI(GUIBase):
         self._mw.setWavelengthDoubleSpinBox.setValue(self._mw.setWavelengthVerticalSlider.value())
         self.sigWavelength.emit(self._mw.setWavelengthDoubleSpinBox.value())
 
+    @QtCore.Slot()
+    def updateFromCheckBox(self):
+        """ The user has changed the check box, update all other values from that. """
+        if self._mw.checkBoxSMILE.isChecked():
+            self.sigOpt.emit(1)
+        else:
+            self.sigOpt.emit(0)
 
+        if self._mw.checkBoxUStep.isChecked():
+            self.sigOpt.emit(3)
+        else:
+            self.sigOpt.emit(2)

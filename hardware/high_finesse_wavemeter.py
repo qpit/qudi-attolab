@@ -82,7 +82,7 @@ class HighFinesseWavemeter(Base,WavemeterInterface):
     Example config for copy-paste:
 
     high_finesse_wavemeter:
-        module.Class: 'high_fin«esse_wavemeter.HighFinesseWavemeter'
+        module.Class: 'high_finesse_wavemeter.HighFinesseWavemeter'
         measurement_timing: 10.0 # in seconds
 
     """

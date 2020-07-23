@@ -48,15 +48,16 @@ class LaserScannerLogic(GenericLogic):
     confocalscanner1 = Connector(interface='ConfocalScannerInterface')
     savelogic = Connector(interface='SaveLogic')
 
-    scan_range = StatusVar('scan_range', [-10, 10])
+    scan_range = StatusVar('scan_range', [0, 4])
     number_of_repeats = StatusVar(default=10)
     resolution = StatusVar('resolution', 500)
-    _scan_speed = StatusVar('scan_speed', 10)
-    _static_v = StatusVar('goto_voltage', 5)
+    _scan_speed = StatusVar('scan_speed', 5)
+    _static_v = StatusVar('goto_voltage', 0)
 
     sigChangeVoltage = QtCore.Signal(float)
     sigVoltageChanged = QtCore.Signal(float)
     sigScanNextLine = QtCore.Signal()
+    signal_change_position = QtCore.Signal(str)
     sigUpdatePlots = QtCore.Signal()
     sigScanFinished = QtCore.Signal()
     sigScanStarted = QtCore.Signal()
@@ -78,6 +79,8 @@ class LaserScannerLogic(GenericLogic):
         self.plot_y = []
         self.plot_y2 = []
 
+
+
     def on_activate(self):
         """ Initialisation performed during activation of the module.
         """
@@ -92,7 +95,10 @@ class LaserScannerLogic(GenericLogic):
         self.current_position = self._scanning_device.get_scanner_position()
 
         # initialise the range for scanning
+        self.scan_range = [0.0, 4.0]
         self.set_scan_range(self.scan_range)
+
+        self._static_v = 2
 
         # Keep track of the current static voltage even while a scan may cause the real-time
         # voltage to change.
@@ -115,6 +121,7 @@ class LaserScannerLogic(GenericLogic):
 
         # TODO: allow configuration with respect to measurement duration
         self.acquire_time = 20  # seconds
+        self._scan_speed = 5
 
         # default values for clock frequency and slowness
         # slowness: steps during retrace line
@@ -124,6 +131,9 @@ class LaserScannerLogic(GenericLogic):
         self._smoothing_steps = 10  # steps to accelerate between 0 and scan_speed
         self._max_step = 0.01  # volt
 
+        self._current_a = 0
+        self._change_position('activation')
+
         ##############################
 
         # Initialie data matrix
@@ -132,6 +142,7 @@ class LaserScannerLogic(GenericLogic):
     def on_deactivate(self):
         """ Deinitialisation performed during deactivation of the module.
         """
+        self.set_voltage(0)
         self.stopRequested = True
 
     @QtCore.Slot(float)
@@ -217,7 +228,7 @@ class LaserScannerLogic(GenericLogic):
         self._goto_speed = self._scan_speed
 
     def set_scan_lines(self, scan_lines):
-        self.number_of_repeats = int(np.clip(scan_lines, 1, 1e6))
+        self.number_of_repeats    = int(np.clip(scan_lines, 1, 1e6))
 
     def _initialise_data_matrix(self, scan_length):
         """ Initializing the ODMR matrix plot. """
@@ -255,6 +266,48 @@ class LaserScannerLogic(GenericLogic):
             return -1
 
         return 0
+
+    def _change_position(self, tag):
+        """ Threaded method to change the hardware position.
+
+        @return int: error code (0:OK, -1:error)
+        """
+        ch_array = ['a']
+        pos_array = [self._current_a]
+        pos_dict = {}
+
+        # for i, ch in enumerate(self.get_scanner_axes()):
+        pos_dict[ch_array[0]] = pos_array[0]
+
+        self._scanning_device.scanner_set_position(**pos_dict)
+        return 0
+
+    def get_scanner_axes(self):
+        """ Get axes from scanning device.
+          @return list(str): names of scanner axes
+        """
+        return self._scanning_device.get_scanner_axes()
+
+    def set_position(self, tag, a=None):
+        """Forwarding the desired new position from the GUI to the scanning device.
+
+        @param string tag: TODO
+
+        @param float a: if defined, changes to postion in a-direction (microns)
+
+        @return int: error code (0:OK, -1:error)
+        """
+        # Changes the respective value
+        if a is not None:
+            self._current_a = a
+
+        # Checks if the scanner is still running
+        if self.module_state() == 'locked' or self._scanning_device.module_state() == 'locked':
+            return -1
+        else:
+            self._change_position(tag)
+            self.signal_change_position.emit(tag)
+            return 0
 
     def start_scanning(self, v_min=None, v_max=None):
         """Setting up the scanner device and starts the scanning procedure
@@ -383,7 +436,7 @@ class LaserScannerLogic(GenericLogic):
                     'configured smoothing_steps. A simple linear ramp '
                     'was created instead.')
                 num_of_linear_steps = np.rint((v_max - v_min) / linear_v_step)
-                ramp = np.linspace(v_min, v_max, num_of_linear_steps)
+                ramp = np.linspace(v_min, v_max, int(num_of_linear_steps))
 
             else:
 
@@ -399,7 +452,7 @@ class LaserScannerLogic(GenericLogic):
                 accel_part = v_min + smooth_curve
                 decel_part = v_max - smooth_curve[::-1]
 
-                linear_part = np.linspace(v_min_linear, v_max_linear, num_of_linear_steps)
+                linear_part = np.linspace(v_min_linear, v_max_linear, int(num_of_linear_steps))
 
                 ramp = np.hstack((accel_part, linear_part, decel_part))
 
