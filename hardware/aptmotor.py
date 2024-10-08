@@ -63,7 +63,8 @@ class APTMotor:
                    'TDC001': 31,  # 1 Ch DC servo driver T-Cube
                    'LTSXXX': 42,  # LTS300/LTS150 Long Travel Integrated Driver/Stages
                    'L490MZ': 43,  # L490MZ Integrated Driver/Labjack
-                   'BBD10X': 44}  # 1/2/3 Ch benchtop brushless DC servo driver
+                   'BBD10X': 44,  # 1/2/3 Ch benchtop brushless DC servo driver
+                   'K10CR1': 50}  # I added this to try (the number 50 I got from Tobias's module), Daniel
 
     # the error code is also comparable to the APT server documentation.
     error_code = {10000: 'An unknown Server error has occurred. ',
@@ -227,7 +228,7 @@ class APTMotor:
         self.verbose = False
         self.label = label
         self.setSerialNumber(serialnumber)
-        self._wait_until_done = True
+        self._wait_until_done = False
 
         # all apt stages are either in mm or in degree and
         # since mm is not an SI unit it has to be converted

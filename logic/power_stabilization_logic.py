@@ -66,12 +66,16 @@ class PowerStabilizationLogic(GenericLogic):
         self._powermeter.set_wavelength(600.0)
         self._powermeter.set_autorange(1)
 
+        # transmission between powermeter and sample
+        # used in the PM100 get power method to correct the actual measurement
+        self.transmission_k = 5.48 / 0.72 / 10
+
         # PID
         self.pid_status = False
         self.ramp_status = False
         self.setpoint = 0.
         self.polarity = 1
-        self.kp, self.ki, self.kd = 500, 1, 0
+        self.kp, self.ki, self.kd = 100, 1, 0
         self.min_pid_out, self.max_pid_out = 0., 0.4
         self.min_volt, self.max_volt = 0., 0.8
         self.ramping_factor = 0.01
@@ -255,7 +259,7 @@ class PowerStabilizationLogic(GenericLogic):
 
     def get_power(self):
         """ Get the optical power measured by the power meter. """
-        return self._powermeter.get_power()
+        return self._powermeter.get_power() / self.transmission_k
 
     def get_wavelength(self):
         """ Get the wavelength value of the PM100 powermeter """

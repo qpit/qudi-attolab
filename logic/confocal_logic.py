@@ -63,9 +63,12 @@ class ConfocalHistoryEntry(QtCore.QObject):
         self.z_range = confocal._scanning_device.get_position_range()[2]
 
         # Sets the current position to the center of the maximal scanning range
-        self.current_x = self.x_range[0]
-        self.current_y = self.y_range[0]
-        self.current_z = self.z_range[0]
+        self.current_x = confocal._scanning_device.get_scanner_position()[0]
+        self.current_y = confocal._scanning_device.get_scanner_position()[1]
+        self.current_z = confocal._scanning_device.get_scanner_position()[2]
+        # self.current_x = self.x_range[0]
+        # self.current_y = self.y_range[0]
+        # self.current_z = self.z_range[0]
         self.current_a = 0.0
 
         # Sets the size of the image to the maximal scanning range
@@ -402,6 +405,8 @@ class ConfocalLogic(GenericLogic):
         #            time.sleep(0.01)
         self._scan_counter = 0
         self._zscan = zscan
+        # A flag used in self._scan_line() to check whether it is a resumed scan
+        self._continuation = False
         if self._zscan:
             self._zscan_continuable = True
         else:
@@ -420,6 +425,8 @@ class ConfocalLogic(GenericLogic):
             self._scan_counter = self._depth_line_pos
         else:
             self._scan_counter = self._xy_line_pos
+        # A flag used in self._scan_line() to check whether it is a resumed scan
+        self._continuation = True
         self.signal_continue_scanning.emit(tag)
         return 0
 
@@ -717,15 +724,37 @@ class ConfocalLogic(GenericLogic):
         """scanning an image in either depth or xy
 
         """
+        image = self.depth_image if self._zscan else self.xy_image
+        n_ch = len(self.get_scanner_axes())
+        s_ch = len(self.get_scanner_count_channels())
+
         # stops scanning
         if self.stopRequested:
             with self.threadlock:
+                # ------ Make a line from the end-scan position to the cursor position
+                if not self._zscan:
+                    # Line at which scan was terminated
+                    stop_line = self._scan_counter - 1
+                    rs = self.return_slowness
+                    lsx = np.linspace(image[stop_line, 0, 0], self._current_x, rs)
+                    lsy = np.linspace(image[stop_line, 0, 1], self._current_y, rs)
+                    lsz = np.linspace(image[stop_line, 0, 2], self._current_z, rs)
+                    if n_ch <= 3:
+                        start_line = np.vstack([lsx, lsy, lsz][0:n_ch])
+                    else:
+                        start_line = np.vstack(
+                            [lsx, lsy, lsz, np.ones(lsx.shape) * self._current_a])
+                    # move to the start position of the scan, counts are thrown away
+                    self._scanning_device.scan_line(start_line)
+                else:
+                    # ToDo: make a proper line for zscan instead of a jump
+                    self.set_position('scanner')
+                # ---------------------------------------------------------------------
                 self.kill_scanner()
                 self.stopRequested = False
                 self.module_state.unlock()
                 self.signal_xy_image_updated.emit()
                 self.signal_depth_image_updated.emit()
-                self.set_position('scanner')
                 if self._zscan:
                     self._depth_line_pos = self._scan_counter
                 else:
@@ -739,12 +768,9 @@ class ConfocalLogic(GenericLogic):
                 self.history_index = len(self.history) - 1
                 return
 
-        image = self.depth_image if self._zscan else self.xy_image
-        n_ch = len(self.get_scanner_axes())
-        s_ch = len(self.get_scanner_count_channels())
-
         try:
-            if self._scan_counter == 0:
+            if self._scan_counter == 0 or self._continuation:
+                self._continuation = False  # Do this only once in resumed scan
                 # make a line from the current cursor position to
                 # the starting position of the first scan line of the scan
                 rs = self.return_slowness

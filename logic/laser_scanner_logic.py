@@ -139,6 +139,8 @@ class LaserScannerLogic(GenericLogic):
         # Initialie data matrix
         self._initialise_data_matrix(100)
 
+        return
+
     def on_deactivate(self):
         """ Deinitialisation performed during deactivation of the module.
         """
@@ -235,7 +237,9 @@ class LaserScannerLogic(GenericLogic):
 
         self.scan_matrix = np.zeros((self.number_of_repeats, scan_length))
         self.scan_matrix2 = np.zeros((self.number_of_repeats, scan_length))
-        self.plot_x = np.linspace(self.scan_range[0], self.scan_range[1], scan_length)
+
+        self.plot_x = np.linspace(57/4*self.scan_range[0]-57/2, 57/4*self.scan_range[1]-57/2, scan_length)
+        #self.plot_x = np.linspace(self.scan_range[0], self.scan_range[1], scan_length)
         self.plot_y = np.zeros(scan_length)
         self.plot_y2 = np.zeros(scan_length)
         self.fit_x = np.linspace(self.scan_range[0], self.scan_range[1], scan_length)
@@ -534,7 +538,7 @@ class LaserScannerLogic(GenericLogic):
 
         # prepare the data in a dict or in an OrderedDict:
         data = OrderedDict()
-        data['frequency (Hz)'] = self.plot_x
+        data['frequency (GHz)'] = self.plot_x
         data['trace count data (counts/s)'] = self.plot_y
         data['retrace count data (counts/s)'] = self.plot_y2
 
@@ -554,7 +558,7 @@ class LaserScannerLogic(GenericLogic):
         fig = self.draw_figure(
             self.scan_matrix,
             self.plot_x,
-            self.plot_y,
+            self.plot_y/self._scan_counter_up,
             self.fit_x,
             self.fit_y,
             cbar_range=colorscale_range,
@@ -563,7 +567,7 @@ class LaserScannerLogic(GenericLogic):
         fig2 = self.draw_figure(
             self.scan_matrix2,
             self.plot_x,
-            self.plot_y2,
+            self.plot_y2/self._scan_counter_up,
             self.fit_x,
             self.fit_y,
             cbar_range=colorscale_range,
@@ -683,7 +687,7 @@ class LaserScannerLogic(GenericLogic):
             aspect='auto',
             interpolation='nearest')
 
-        ax_matrix.set_xlabel('Frequency (' + mw_prefix + 'Hz)')
+        ax_matrix.set_xlabel('Frequency (' + mw_prefix + 'GHz)')
         ax_matrix.set_ylabel('Scan #')
 
         # Adjust subplots to make room for colorbar
