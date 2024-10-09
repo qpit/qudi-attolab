@@ -358,6 +358,9 @@
          <property name="decimals">
           <number>3</number>
          </property>
+         <property name="minimum">
+          <double>0.025000000000000</double>
+         </property>
          <property name="maximum">
           <double>9999.989999999999782</double>
          </property>
