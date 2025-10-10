@@ -70,6 +70,7 @@ class ODMRCounterMicrowaveInterfuse(GenericLogic, ODMRCounterInterface,
 
         @return int: error code (0:OK, -1:error)
         """
+        print("Setting up ODMR clock")
         return self._sc_device.set_up_clock(clock_frequency=clock_frequency,
                                                    clock_channel=clock_channel)
 
@@ -88,11 +89,12 @@ class ODMRCounterMicrowaveInterfuse(GenericLogic, ODMRCounterInterface,
 
         @return int: error code (0:OK, -1:error)
         """
-
+        print("Setting up ODMR counter")
         return self._sc_device.set_up_counter(counter_channels=counter_channel,
                                                 sources=photon_source,
                                                 clock_channel=clock_channel,
-                                                counter_buffer=None)
+                                                counter_buffer=None)  # For NI X-series
+                                                #counter_buffer=None, odmr=True) # For NI M-series
 
     def set_odmr_length(self, length=100):
         """Set up the trigger sequence for the ODMR and the triggered microwave.
@@ -102,6 +104,13 @@ class ODMRCounterMicrowaveInterfuse(GenericLogic, ODMRCounterInterface,
         @return int: error code (0:OK, -1:error)
         """
         self._odmr_length = length
+        return 0
+
+    def start_odmr_line_scan(self):
+        """ Starts an ODMR line scan and returns the necessary variables.
+
+        @return tuple: (start_frequency, stop_frequency, num_points, scan_data)
+        """
         return 0
 
     def count_odmr(self, length = 100):
@@ -116,7 +125,7 @@ class ODMRCounterMicrowaveInterfuse(GenericLogic, ODMRCounterInterface,
         # self.trigger()
         for i in range(length):
             self.trigger()
-            counts[:, i] = self._sc_device.get_counter(samples=1)[0]
+            counts[:, i] = self._sc_device.get_counter(samples=1)[:, 0]
         self.trigger()
         return False, counts
 
