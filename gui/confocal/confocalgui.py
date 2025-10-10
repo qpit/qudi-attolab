@@ -414,6 +414,11 @@ class ConfocalGui(GUIBase):
             delay=0.1,
             slot=self.continue_xy_scan_clicked
             )
+        self._scan_3dODMR_start_proxy = pg.SignalProxy(
+            self._mw.action_scan_3dODMR_start.triggered,
+            delay=0.1,
+            slot=self.button3dODMR_scan_clicked
+            )
         self._scan_depth_start_proxy = pg.SignalProxy(
             self._mw.action_scan_depth_start.triggered,
             delay=0.1,
@@ -786,6 +791,7 @@ class ConfocalGui(GUIBase):
         # Disable the start scan buttons
         self._mw.action_scan_xy_start.setEnabled(False)
         self._mw.action_scan_depth_start.setEnabled(False)
+        self._mw.action_scan_3dODMR_start.setEnabled(False)
 
         self._mw.action_scan_xy_resume.setEnabled(False)
         self._mw.action_scan_depth_resume.setEnabled(False)
@@ -819,6 +825,7 @@ class ConfocalGui(GUIBase):
         self._mw.action_scan_xy_start.setEnabled(True)
         self._mw.action_scan_depth_start.setEnabled(True)
 #        self._mw.actionRotated_depth_scan.setEnabled(True)
+        self._mw.action_scan_3dODMR_start.setEnabled(True)
 
         self._mw.action_optimize_position.setEnabled(True)
 
@@ -985,6 +992,11 @@ class ConfocalGui(GUIBase):
         """ Continue xy scan. """
         self.disable_scan_actions()
         self._scanning_logic.continue_scanning(zscan=False, tag='gui')
+
+    def button3dODMR_scan_clicked(self):
+        """ Start a 3DODMR scan when button is clicked. """
+        self.disable_scan_actions()
+        self._scanning_logic.start_scanning(zscan=False, tag='3DODMR')
 
     def continue_depth_scan_clicked(self):
         """ Continue depth scan. """

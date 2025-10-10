@@ -28,6 +28,7 @@ import numpy as np
 import time
 import datetime
 import matplotlib.pyplot as plt
+from scipy.signal import savgol_filter
 
 from logic.generic_logic import GenericLogic
 from core.util.mutex import Mutex
@@ -1181,3 +1182,172 @@ class ODMRLogic(GenericLogic):
             self.save_odmr_data(tag=name_tag)
 
         return self.odmr_plot_x, self.odmr_plot_y, fit_params
+
+
+    def scan_single_line_with_wait(self):
+        """Start an ODMR scan, wait for it to complete, and return the counts."""
+        i = self.start_odmr_scan_for3d()
+        print("Проверка start_odmr_scan(): ", i)
+        self._wait_for_odmr_completion()
+        line_counts = self.odmr_raw_data[0, :, :]
+        i = self.stop_odmr_scan()
+        print("Проверка stop_odmr_scan(): ", i)
+        sweep_count = self.odmr_raw_data.shape[0]
+        smoothed_spectrum = np.zeros(
+            [sweep_count,
+             len(self._odmr_counter.get_odmr_channels()),
+             self.odmr_plot_x.size])
+        for j in range(sweep_count):
+            print("Проверка self.odmr_raw_data[j, :, :].shape: ", self.odmr_raw_data[j, :, :].shape)
+            smoothed_spectrum[j, 0, :] = savgol_filter(self.odmr_raw_data[j, 0, :], window_length=5, polyorder=2)
+            smoothed_spectrum[j, 1, :] = savgol_filter(self.odmr_raw_data[j, 1, :], window_length=5, polyorder=2)
+            print("Проверка smoothed_spectrum[j, :, :]: ", smoothed_spectrum[j, :, :])
+
+        line_counts_processed = np.mean(
+            smoothed_spectrum[:max(1, min(self.lines_to_average, self.elapsed_sweeps)), :, :],
+            axis=0,
+            dtype=np.float64
+        )
+        return line_counts_processed.T
+
+    def _wait_for_odmr_completion(self):
+        """Wait until the ODMR scan is complete."""
+        while not self.stopRequested:
+            time.sleep(0.05)  # Adjust sleep duration as needed
+            if self._odmr_scan_completed():
+                break
+
+    def _odmr_scan_completed(self):
+        """Check if the ODMR scan is completed."""
+        # Implement the logic to check if the ODMR scan is completed
+        return self.elapsed_time >= self.run_time or self.stopRequested
+
+    def start_odmr_scan_for3d(self):
+        """ Starting an ODMR scan for 3D.
+
+        @return int: error code (0:OK, -1:error)
+        """
+        with self.threadlock:
+            if self.module_state() == 'locked':
+                self.log.error('Can not start ODMR scan. Logic is already locked.')
+                return -1
+
+            self.set_trigger(self.mw_trigger_pol, self.clock_frequency)
+
+            self.module_state.lock()
+            self._clearOdmrData = False
+            self.stopRequested = False
+            self.fc.clear_result()
+
+            self.elapsed_sweeps = 0
+            self.elapsed_time = 0.0
+            self._startTime = time.time()
+            self.sigOdmrElapsedTimeUpdated.emit(self.elapsed_time, self.elapsed_sweeps)
+
+            odmr_status = self._start_odmr_counter()
+            if odmr_status < 0:
+                mode, is_running = self._mw_device.get_status()
+                self.sigOutputStateUpdated.emit(mode, is_running)
+                self.module_state.unlock()
+                return -1
+
+            mode, is_running = self.mw_sweep_on()
+            if not is_running:
+                self._stop_odmr_counter()
+                self.module_state.unlock()
+                return -1
+
+            self._initialize_odmr_plots()
+            # initialize raw_data array
+            estimated_number_of_lines = self.run_time * self.clock_frequency / self.odmr_plot_x.size
+            estimated_number_of_lines = int(1.5 * estimated_number_of_lines)  # Safety
+            if estimated_number_of_lines < self.number_of_lines:
+                estimated_number_of_lines = self.number_of_lines
+            self.log.debug('Estimated number of raw data lines: {0:d}'
+                           ''.format(estimated_number_of_lines))
+            self.odmr_raw_data = np.zeros(
+                [estimated_number_of_lines,
+                 len(self._odmr_counter.get_odmr_channels()),
+                 self.odmr_plot_x.size]
+            )
+
+            # if during the scan a clearing of the ODMR data is needed:
+            if self._clearOdmrData:
+                self.elapsed_sweeps = 0
+                self._startTime = time.time()
+
+            while self.elapsed_sweeps < estimated_number_of_lines - 1:
+                # reset position so every line starts from the same frequency
+                self.reset_sweep()
+                # Acquire count data
+                error, new_counts = self._odmr_counter.count_odmr(length=self.odmr_plot_x.size)
+
+                # Return counts as if the frequency list was ordered
+                if self._shuffle_active:
+                    new_counts = new_counts[:, self.shuffle_order]
+
+                if error:
+                    self.stopRequested = True
+                    return
+
+                # Add new count data to raw_data array and append if array is too small
+                if self._clearOdmrData:
+                    self.odmr_raw_data[:, :, :] = 0
+                    self._clearOdmrData = False
+                if self.elapsed_sweeps == (self.odmr_raw_data.shape[0] - 1):
+                    expanded_array = np.zeros(self.odmr_raw_data.shape)
+                    self.odmr_raw_data = np.concatenate((self.odmr_raw_data, expanded_array), axis=0)
+                    self.log.warning('raw data array in ODMRLogic was not big enough for the entire '
+                                     'measurement. Array will be expanded.\nOld array shape was '
+                                     '({0:d}, {1:d}), new shape is ({2:d}, {3:d}).'
+                                     ''.format(self.odmr_raw_data.shape[0] - self.number_of_lines,
+                                               self.odmr_raw_data.shape[1],
+                                               self.odmr_raw_data.shape[0],
+                                               self.odmr_raw_data.shape[1]))
+
+                # shift data in the array "up" and add new data at the "bottom"
+                self.odmr_raw_data = np.roll(self.odmr_raw_data, 1, axis=0)
+
+                self.odmr_raw_data[0] = new_counts
+
+                # Add new count data to mean signal
+                if self._clearOdmrData:
+                    self.odmr_plot_y[:, :] = 0
+
+                if self.lines_to_average <= 0:
+                    self.odmr_plot_y = np.mean(
+                        self.odmr_raw_data[:max(1, self.elapsed_sweeps), :, :],
+                            axis=0,
+                            dtype=np.float64
+                        )
+                else:
+                    self.odmr_plot_y = np.mean(
+                        self.odmr_raw_data[:max(1, min(self.lines_to_average, self.elapsed_sweeps)), :, :],
+                            axis=0,
+                            dtype=np.float64
+                        )
+                # Set plot slice of matrix
+                self.odmr_plot_xy = self.odmr_raw_data[:self.number_of_lines, :, :]
+
+                # Update elapsed time/sweeps
+                self.elapsed_sweeps += 1
+                self.elapsed_time = time.time() - self._startTime
+                print("Проверка self.elapsed_time: ", self.elapsed_time)
+                print("Проверка self.run_time: ", self.run_time)
+
+                # Fire update signals
+                self.sigOdmrElapsedTimeUpdated.emit(self.elapsed_time, self.elapsed_sweeps)
+                self.sigOdmrPlotsUpdated.emit(self.odmr_plot_x, self.odmr_plot_y, self.odmr_plot_xy)
+
+            self.stopRequested = True
+
+            # Stop measurement if stop has been requested
+            print("Проверка self.stopRequested: ", self.stopRequested)
+            if self.stopRequested:
+                self.stopRequested = False
+                self.mw_off()
+                self._stop_odmr_counter()
+                self.module_state.unlock()
+                return
+
+            return 1
